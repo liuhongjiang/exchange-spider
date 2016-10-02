@@ -91,6 +91,7 @@ def output_csv(data):
                     f.write(quotation[td_name_maps[name]] + ',')
                 f.write('\n')
             f.write('\n\n')
+    return filename
 
 
 first_url = "http://www.boc.cn/sourcedb/whpj/index.html"
@@ -101,6 +102,8 @@ for i in range(1, 10):
     print(base_url % i)
     get_data_from_url(base_url % i)
 
-output_csv(highest)
+fn = output_csv(highest)
 
-print("done!")
+print("Done! 生成数据文件：%s\n" % fn)
+
+input("按回车结束！")
