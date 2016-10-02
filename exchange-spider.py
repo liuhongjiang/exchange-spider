@@ -48,6 +48,7 @@ def generate_quotation_obj(quotation_match):
 
 
 def get_data_from_url(url):
+    print(url)
     r = requests.get(url)
     r.encoding = "utf-8"
     text = r.text.replace('\n', '')
@@ -99,7 +100,6 @@ base_url = "http://www.boc.cn/sourcedb/whpj/index_%d.html"
 
 get_data_from_url(first_url)
 for i in range(1, 10):
-    print(base_url % i)
     get_data_from_url(base_url % i)
 
 fn = output_csv(highest)
