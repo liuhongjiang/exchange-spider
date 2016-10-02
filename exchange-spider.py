@@ -1,23 +1,10 @@
-import requests
-import re
-import pprint
 import datetime
+import re
+
+import requests
 
 non_exist_pattern = re.compile(r"您访问的中国银行网站页面不存在")
 tr_pattern = re.compile(r'<tr>.*?</tr>', re.DOTALL)
-# pattern = re.compile(r'<tbody>.*?</tbody>', re.DOTALL)
-# pattern = re.compile(r'XHTML', re.DOTALL)
-
-# pattern = re.compile(r'<tr>
-#                     	<td>丹麦克朗</td>
-#                         <td>100.34</td>
-#                         <td>97.24</td>
-#                         <td>101.14</td>
-#                         <td>101.14</td>
-#                         <td>100.32</td>
-#                         <td>2016-10-01</td>
-#                         <td>10:30:00</td>
-#                     </tr>')
 
 td_name_maps = {'name': '货币名称',
                 'xhmr': '现汇买入价',
@@ -29,33 +16,41 @@ td_name_maps = {'name': '货币名称',
                 'time': '发布时间'}
 td_names = ['name', 'xhmr', 'xcmr', 'xhmc', 'xcmc', 'zhzs', 'date', 'time']
 
+############################
+#  <tr>
+#    <td>丹麦克朗</td>
+#    <td>100.34</td>
+#    <td>97.24</td>
+#    <td>101.14</td>
+#    <td>101.14</td>
+#    <td>100.32</td>
+#    <td>2016-10-01</td>
+#    <td>10:30:00</td>
+#  </tr>
+############################
 pattern_str = ''.join([r'<td.*?>(?P<' + key + '>.*?)</td>\s*?' for key in td_names])
-
-# print(pattern_str)
-
 quotation_pattern = re.compile(r'<tr.*?>\s*?' + pattern_str + r'</tr>', re.DOTALL)
-    # r'<tr.*?>\s*?'
-    # r'<td.*?>(?P<name>.*?)</td>\s*?'
-    # r'<td.*?>(?P<xhmr>.*?)</td>\s*?'
-    # r'<td.*?>(?P<xcmr>.*?)</td>\s*?'
-    # r'<td.*?>(?P<xhmc>.*?)</td>\s*?'
-    # r'<td.*?>(?P<xcmc>.*?)</td>\s*?'
-    # r'<td.*?>(?P<zhzs>.*?)</td>\s*?'
-    # r'<td.*?>(?P<date>.*?)</td>\s*?'
-    # r'<td.*?>(?P<time>.*?)</td>\s*?'
-    # r'</tr>', re.DOTALL)
 
 highest = {}
 
 
+def generate_quotation_obj(quotation_match):
+    return {
+        td_name_maps['name']: quotation_match.group('name'),
+        td_name_maps['xhmr']: quotation_match.group('xhmr'),
+        td_name_maps['xcmr']: quotation_match.group('xcmr'),
+        td_name_maps['xhmc']: quotation_match.group('xhmc'),
+        td_name_maps['xcmc']: quotation_match.group('xcmc'),
+        td_name_maps['zhzs']: quotation_match.group('zhzs'),
+        td_name_maps['date']: quotation_match.group('date'),
+        td_name_maps['time']: quotation_match.group('time'),
+    }
+
+
 def get_data_from_url(url):
     r = requests.get(url)
-    # print(r.status_code)
-    # print(r.headers['content-type'])
-    # print(r.encoding)
     r.encoding = "utf-8"
     text = r.text.replace('\n', '')
-    # print(text)
 
     non_exist_match = non_exist_pattern.search(text)
     if non_exist_match:
@@ -68,45 +63,15 @@ def get_data_from_url(url):
             if quotation_match:
                 a = quotation_match.group()
                 if a.find("起始时间") == -1:
-                    # print(quotation_match.group())
-                    # print(quotation_match.group('name'))
-                    # print(quotation_match.group('xhmr'))
-                    # print(quotation_match.group('xcmr'))
-                    # print(quotation_match.group('xhmc'))
-                    # print(quotation_match.group('xcmc'))
-                    # print(quotation_match.group('zhzs'))
-                    # print(quotation_match.group('date'))
-                    # print(quotation_match.group('time'))
                     date = quotation_match.group('date')
                     name = quotation_match.group('name')
                     if date not in highest:
                         highest[date] = {}
                     if name not in highest[date]:
-                        # print(td_name_maps['time'])
-                        highest[date][name] = {
-                            td_name_maps['name']: quotation_match.group('name'),
-                            td_name_maps['xhmr']: quotation_match.group('xhmr'),
-                            td_name_maps['xcmr']: quotation_match.group('xcmr'),
-                            td_name_maps['xhmc']: quotation_match.group('xhmc'),
-                            td_name_maps['xcmc']: quotation_match.group('xcmc'),
-                            td_name_maps['zhzs']: quotation_match.group('zhzs'),
-                            td_name_maps['date']: quotation_match.group('date'),
-                            td_name_maps['time']: quotation_match.group('time'),
-                        }
+                        highest[date][name] = generate_quotation_obj(quotation_match)
                     else:
                         if highest[date][name][td_name_maps['xhmc']] < quotation_match.group('xhmc'):
-                            highest[date][name] = {
-                                td_name_maps['name']: quotation_match.group('name'),
-                                td_name_maps['xhmr']: quotation_match.group('xhmr'),
-                                td_name_maps['xcmr']: quotation_match.group('xcmr'),
-                                td_name_maps['xhmc']: quotation_match.group('xhmc'),
-                                td_name_maps['xcmc']: quotation_match.group('xcmc'),
-                                td_name_maps['zhzs']: quotation_match.group('zhzs'),
-                                td_name_maps['date']: quotation_match.group('date'),
-                                td_name_maps['time']: quotation_match.group('time'),
-                            }
-
-                    # print(quotation_match.group())
+                            highest[date][name] = generate_quotation_obj(quotation_match)
     else:
         print('not match!')
 
@@ -136,12 +101,6 @@ for i in range(1, 10):
     print(base_url % i)
     get_data_from_url(base_url % i)
 
-# print(highest)
-# pprint.pprint(highest)
 output_csv(highest)
-# else:
-#     print('not match!')
-# print(r.text)
-# with open('test.txt', encoding='utf-8', mode='w') as f:
-#     f.write(r.text)
-# print("done!")
+
+print("done!")
